@@ -5,6 +5,7 @@
 import { jsx } from '@emotion/core';
 import { useContext, FC, useEffect, useState, useRef } from 'react';
 import { MarqueeSelection, Selection } from 'office-ui-fabric-react/lib/MarqueeSelection';
+import { Modal } from 'office-ui-fabric-react/lib/Modal';
 import {
   SDKKinds,
   deleteAction,
@@ -15,6 +16,10 @@ import {
   walkLgResourcesInActionList,
 } from '@bfc/shared';
 import get from 'lodash/get';
+import { IIconProps } from 'office-ui-fabric-react/lib/Icon';
+import { IconButton } from 'office-ui-fabric-react/lib/Button';
+import formatMessage from 'format-message';
+import { getTheme, mergeStyleSets, FontWeights } from 'office-ui-fabric-react/lib/Styling';
 
 import { NodeEventTypes } from '../constants/NodeEventTypes';
 import { KeyboardCommandTypes, KeyboardPrimaryTypes } from '../constants/KeyboardCommandTypes';
@@ -41,6 +46,45 @@ import { scrollNodeIntoView } from '../utils/nodeOperation';
 import { designerCache } from '../store/DesignerCache';
 
 import { AdaptiveDialogEditor } from './AdaptiveDialogEditor';
+
+// modal style
+const theme = getTheme();
+const contentStyles = mergeStyleSets({
+  container: {
+    display: 'flex',
+    flexFlow: 'column nowrap',
+    alignItems: 'stretch',
+  },
+  header: [
+    // tslint:disable-next-line:deprecation
+    theme.fonts.xLargePlus,
+    {
+      flex: '1 1 auto',
+      borderTop: `4px solid ${theme.palette.themePrimary}`,
+      color: theme.palette.neutralPrimary,
+      display: 'flex',
+      alignItems: 'center',
+      fontWeight: FontWeights.semibold,
+      padding: '6px 12px 14px 24px',
+    },
+  ],
+  body: {
+    flex: '4 4 auto',
+    padding: '24px',
+    overflowY: 'hidden',
+  },
+});
+const iconButtonStyles = {
+  root: {
+    color: theme.palette.neutralPrimary,
+    marginLeft: 'auto',
+    marginTop: '4px',
+    marginRight: '2px',
+  },
+  rootHovered: {
+    color: theme.palette.neutralDark,
+  },
+};
 
 export const ObiEditor: FC<ObiEditorProps> = ({
   path,
@@ -291,6 +335,12 @@ export const ObiEditor: FC<ObiEditorProps> = ({
     getNodeIndex: (nodeId: string): number => nodeIndexGenerator.current.getNodeIndex(nodeId),
     selectedIds: [],
   });
+  const [showModal, setShowModal] = useState(false);
+  const cancelIcon: IIconProps = { iconName: 'Cancel' };
+
+  const hideModal = () => {
+    setShowModal(false);
+  };
 
   useEffect((): void => {
     // Notify container at every selection change.
@@ -368,6 +418,8 @@ export const ObiEditor: FC<ObiEditorProps> = ({
                 target: focusedId,
                 actions: clipboardActions,
               });
+            } else {
+              setShowModal(true);
             }
             break;
           }
@@ -400,6 +452,7 @@ export const ObiEditor: FC<ObiEditorProps> = ({
     }
   };
   if (!data) return renderFallbackContent();
+
   return (
     <SelectionContext.Provider value={selectionContext}>
       <KeyboardZone onCommand={handleKeyboardCommand}>
@@ -431,6 +484,23 @@ export const ObiEditor: FC<ObiEditorProps> = ({
               addCoachMarkRef={addCoachMarkRef}
             />
           </div>
+          <Modal
+            titleAriaId="modalTitle"
+            isOpen={showModal}
+            onDismiss={hideModal}
+            isBlocking={false}
+            containerClassName={contentStyles.container}
+          >
+            <div className={contentStyles.header}>
+              <IconButton
+                styles={iconButtonStyles}
+                iconProps={cancelIcon}
+                ariaLabel="Close popup modal"
+                onClick={hideModal}
+              />
+            </div>
+            <div className={contentStyles.body}>{formatMessage('Paste operation not allowed at current element.')}</div>
+          </Modal>
         </MarqueeSelection>
       </KeyboardZone>
     </SelectionContext.Provider>
